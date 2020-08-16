@@ -1,9 +1,12 @@
 use std::net::ToSocketAddrs;
 
 use async_trait::async_trait;
-use hyper::service::{make_service_fn, service_fn};
+use hyper::service::{make_service_fn, service_fn, Service};
 use hyper::{Body, Request, Response, Server};
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context as TaskContext, Poll};
 
 use thruster::context::hyper_request::HyperRequest;
 use thruster::{App, Context, ThrusterServer};
@@ -37,19 +40,7 @@ impl<T: Context<Response = Response<ProtoBody>> + Send, S: 'static + Send + Sync
             let service = make_service_fn(|_| {
                 let app = arc_app.clone();
 
-                async {
-                    Ok::<_, hyper::Error>(service_fn(move |req: Request<Body>| {
-                        let matched = app.resolve_from_method_and_path(
-                            &req.method().to_string(),
-                            &req.uri().path_and_query().unwrap().to_string(),
-                        );
-
-                        let req = HyperRequest::new(req);
-                        let res = app.resolve(req, matched);
-
-                        res
-                    }))
-                }
+                futures::future::ready(Ok::<_, hyper::Error>(_ProtoService { app }))
             });
 
             let server = Server::bind(&addr).serve(service);
@@ -60,5 +51,31 @@ impl<T: Context<Response = Response<ProtoBody>> + Send, S: 'static + Send + Sync
         }
         .await
         .expect("hyper server failed");
+    }
+}
+
+struct _ProtoService<T: 'static + Context + Send, S: Send> {
+    app: Arc<App<HyperRequest, T, S>>,
+}
+
+impl<T: 'static + Context + Send, S: 'static + Send> Service<Request<Body>>
+    for _ProtoService<T, S>
+{
+    type Response = T::Response;
+    type Error = std::io::Error;
+    type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+
+    fn poll_ready(&mut self, _cx: &mut TaskContext<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, req: Request<Body>) -> Self::Future {
+        let matched = self.app.resolve_from_method_and_path(
+            req.method().as_str(),
+            req.uri().path_and_query().unwrap().as_str(),
+        );
+
+        let req = HyperRequest::new(req);
+        Box::pin(self.app.resolve(req, matched))
     }
 }

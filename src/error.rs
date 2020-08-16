@@ -14,9 +14,7 @@ pub trait ProtoErrorSet {
 impl ProtoErrorSet for Error<Ctx> {
     fn already_exists_error(mut context: Ctx) -> Error<Ctx> {
         context.status(409);
-        context
-            .body
-            .set_proto_status(ProtoStatus::AlreadyExists as u16);
+        context.set_proto_status(ProtoStatus::AlreadyExists as u16);
         Error {
             context,
             message: format!("Already exists"),
@@ -27,9 +25,7 @@ impl ProtoErrorSet for Error<Ctx> {
 
     fn parsing_error(mut context: Ctx, error: &str) -> Error<Ctx> {
         context.status(400);
-        context
-            .body
-            .set_proto_status(ProtoStatus::InvalidArgument as u16);
+        context.set_proto_status(ProtoStatus::InvalidArgument as u16);
         Error {
             context,
             message: format!("Failed to parse '{}'", error),
@@ -40,9 +36,7 @@ impl ProtoErrorSet for Error<Ctx> {
 
     fn generic_error(mut context: Ctx) -> Error<Ctx> {
         context.status(400);
-        context
-            .body
-            .set_proto_status(ProtoStatus::InvalidArgument as u16);
+        context.set_proto_status(ProtoStatus::InvalidArgument as u16);
         Error {
             context,
             message: "Something didn't work!".to_string(),
@@ -53,9 +47,7 @@ impl ProtoErrorSet for Error<Ctx> {
 
     fn unauthorized_error(mut context: Ctx) -> Error<Ctx> {
         context.status(401);
-        context
-            .body
-            .set_proto_status(ProtoStatus::Unauthenticated as u16);
+        context.set_proto_status(ProtoStatus::Unauthenticated as u16);
         Error {
             context,
             message: "Unauthorized".to_string(),
@@ -66,7 +58,7 @@ impl ProtoErrorSet for Error<Ctx> {
 
     fn not_found_error(mut context: Ctx) -> Error<Ctx> {
         context.status(404);
-        context.body.set_proto_status(ProtoStatus::NotFound as u16);
+        context.set_proto_status(ProtoStatus::NotFound as u16);
         Error {
             context,
             message: "Not found".to_string(),

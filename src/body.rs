@@ -15,24 +15,21 @@ fn create_default_header_map() -> HeaderMap {
 
 pub struct ProtoBody {
     inner: Body,
-    header_map: HeaderMap,
-    proto_status: u16,
+    header_map: Option<HeaderMap>,
 }
 
 impl ProtoBody {
     pub fn from_bytes(bytes: Bytes) -> ProtoBody {
         ProtoBody {
             inner: Body::from(bytes),
-            header_map: create_default_header_map(),
-            proto_status: 0,
+            header_map: None,
         }
     }
 
     pub fn empty() -> ProtoBody {
         ProtoBody {
             inner: Body::empty(),
-            header_map: create_default_header_map(),
-            proto_status: 0,
+            header_map: None,
         }
     }
 
@@ -40,14 +37,8 @@ impl ProtoBody {
         self.inner = body;
     }
 
-    pub fn set_proto_status(&mut self, status: u16) {
-        self.proto_status = status;
-        self.header_map
-            .insert("grpc-status", format!("{}", status).parse().unwrap());
-    }
-
-    pub fn proto_status(&self) -> u16 {
-        self.proto_status
+    pub fn set_headers(&mut self, headers: HeaderMap) {
+        self.header_map = Some(headers);
     }
 }
 
@@ -55,8 +46,7 @@ impl Default for ProtoBody {
     fn default() -> ProtoBody {
         ProtoBody {
             inner: Body::default(),
-            header_map: create_default_header_map(),
-            proto_status: 0,
+            header_map: Some(create_default_header_map()),
         }
     }
 }
@@ -76,6 +66,6 @@ impl HttpBody for ProtoBody {
         self: Pin<&mut Self>,
         _cx: &mut Context,
     ) -> Poll<Result<Option<HeaderMap>, Self::Error>> {
-        Poll::Ready(Ok(Some(self.header_map.clone())))
+        Poll::Ready(Ok(self.get_mut().header_map.take()))
     }
 }
