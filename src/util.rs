@@ -8,14 +8,16 @@ use tokio::stream::StreamExt;
 use crate::body::ProtoBody;
 use crate::context::ProtoContext as Ctx;
 
-pub async fn context_to_message<T: Message + std::default::Default>(
-    context: Ctx,
-) -> Result<T, DecodeError> {
-    let hyper_request = context.hyper_request.unwrap().request;
+const DEFAULT_CAPACITY: usize = 256;
 
-    let mut results = vec![];
-    let mut body = hyper_request.into_body();
-    while let Some(Ok(chunk)) = body.next().await {
+pub async fn context_to_message<T: Message + std::default::Default>(
+    context: &mut Ctx,
+) -> Result<T, DecodeError> {
+    let mut hyper_request = context.hyper_request.take().unwrap().request;
+
+    let mut results = BytesMut::with_capacity(DEFAULT_CAPACITY);
+    while let Some(Ok(chunk)) = hyper_request.body_mut().next().await {
+        results.reserve(chunk.len());
         results.put(chunk);
     }
 
@@ -46,7 +48,7 @@ pub async fn message_to_context<T: Message + std::default::Default>(
     }
     let buf = buf.split_to(len + 5).freeze();
 
-    context.body = ProtoBody::from_bytes(buf);
+    context.body.replace(ProtoBody::from_bytes(buf));
 
     context
 }
