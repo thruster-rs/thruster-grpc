@@ -43,7 +43,10 @@ impl<T: Context<Response = Response<ProtoBody>> + Send, S: 'static + Send + Sync
                 futures::future::ready(Ok::<_, hyper::Error>(_ProtoService { app }))
             });
 
-            let server = Server::bind(&addr).tcp_keepalive(None).serve(service);
+            let server = Server::bind(&addr)
+                .tcp_keepalive(None)
+                .tcp_nodelay(true)
+                .serve(service);
 
             server.await?;
 
