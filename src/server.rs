@@ -1,7 +1,7 @@
 use std::net::ToSocketAddrs;
 
 use async_trait::async_trait;
-use hyper::service::{make_service_fn, service_fn, Service};
+use hyper::service::{make_service_fn, Service};
 use hyper::{Body, Request, Response, Server};
 use std::future::Future;
 use std::pin::Pin;
@@ -31,19 +31,24 @@ impl<T: Context<Response = Response<ProtoBody>> + Send, S: 'static + Send + Sync
     }
 
     async fn build(mut self, host: &str, port: u16) {
-        self.app._route_parser.optimize();
-
-        let arc_app = Arc::new(self.app);
         let addr = (host, port).to_socket_addrs().unwrap().next().unwrap();
+        let arc_app = Arc::new(self.app);
 
         async move {
             let service = make_service_fn(|_| {
-                let app = arc_app.clone();
-
-                futures::future::ready(Ok::<_, hyper::Error>(_ProtoService { app }))
+                futures::future::ready(Ok::<_, hyper::Error>(_ProtoService {
+                    app: arc_app.clone(),
+                }))
             });
 
-            let server = Server::bind(&addr).tcp_keepalive(None).serve(service);
+            let server = Server::bind(&addr)
+                .tcp_keepalive(None)
+                .tcp_nodelay(true)
+                .http2_only(true)
+                .http2_initial_connection_window_size(None)
+                .http2_initial_stream_window_size(None)
+                .http2_max_concurrent_streams(None)
+                .serve(service);
 
             server.await?;
 
@@ -54,11 +59,11 @@ impl<T: Context<Response = Response<ProtoBody>> + Send, S: 'static + Send + Sync
     }
 }
 
-struct _ProtoService<T: 'static + Context + Send, S: Send> {
+struct _ProtoService<T: 'static + Context + Send, S: Send + Sync> {
     app: Arc<App<HyperRequest, T, S>>,
 }
 
-impl<T: 'static + Context + Send, S: 'static + Send> Service<Request<Body>>
+impl<T: 'static + Context + Send, S: 'static + Send + Sync> Service<Request<Body>>
     for _ProtoService<T, S>
 {
     type Response = T::Response;
