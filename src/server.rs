@@ -44,7 +44,7 @@ impl<T: Context<Response = Response<ProtoBody>> + Send, S: 'static + Send + Sync
             let server = Server::bind(&addr)
                 .tcp_keepalive(None)
                 .tcp_nodelay(true)
-                .http2_only(true)
+                // .http2_only(true)
                 .http2_initial_connection_window_size(None)
                 .http2_initial_stream_window_size(None)
                 .http2_max_concurrent_streams(None)
