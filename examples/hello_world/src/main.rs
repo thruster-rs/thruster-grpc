@@ -16,14 +16,13 @@ mod hello_world {
 }
 
 #[middleware_fn]
-pub async fn say_hello(context: Ctx, _next: MiddlewareNext<Ctx>) -> MiddlewareResult<Ctx> {
-    let reply_context = Ctx::new(HyperRequest::default());
-    let hello_world_request = map_try!(context_to_message::<hello_world::HelloRequest>(context).await, Err(_) => {
-        Error::generic_error(reply_context)
+pub async fn say_hello(mut context: Ctx, _next: MiddlewareNext<Ctx>) -> MiddlewareResult<Ctx> {
+    let hello_world_request = map_try!(context_to_message::<hello_world::HelloRequest>(&mut context).await, Err(_) => {
+        Error::generic_error(context)
     });
 
     Ok(message_to_context(
-        reply_context,
+        context,
         hello_world::HelloReply {
             message: format!("Hello, {}", hello_world_request.name),
         },
