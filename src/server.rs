@@ -52,7 +52,5 @@ impl<
 
             server.await.expect("Hyper server failed to start");
         })
-        // .await
-        // .expect("hyper server failed");
     }
 }
