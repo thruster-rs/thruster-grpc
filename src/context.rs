@@ -1,4 +1,4 @@
-use bytes::Bytes;
+use hyper::body::Bytes;
 use hyper::header::{HeaderName, HeaderValue};
 use hyper::{HeaderMap, Response, StatusCode};
 use std::collections::HashMap;
@@ -230,5 +230,11 @@ impl Context for ProtoContext {
 impl HasQueryParams for ProtoContext {
     fn set_query_params(&mut self, query_params: HashMap<String, String>) {
         self.query_params = Some(query_params);
+    }
+}
+
+impl Clone for ProtoContext {
+    fn clone(&self) -> Self {
+        panic!("Do not use, just for internals.");
     }
 }
