@@ -1,8 +1,10 @@
 [package]
 name = "thruster-grpc"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Pete Mertz <peter.s.mertz@gmail.com>"]
 edition = "2018"
+description = "A GRPC library for use with thruster"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
