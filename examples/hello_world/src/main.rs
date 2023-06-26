@@ -6,11 +6,13 @@ use thruster::{
     middleware_fn, App, MiddlewareNext, MiddlewareResult, ThrusterServer,
 };
 use thruster_grpc::{
-    context::{generate_context, ProtoContext as Ctx},
+    context::{generate_context, ProtoContext},
     error::ProtoErrorSet,
     server::ProtoServer,
     util::{context_to_message, message_to_context},
 };
+
+type Ctx = ProtoContext<()>;
 
 mod hello_world {
     include!(concat!(env!("OUT_DIR"), "/helloworld.rs"));

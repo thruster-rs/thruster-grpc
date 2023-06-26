@@ -3,13 +3,13 @@ use bytes::buf::BufMut;
 use bytes::BytesMut;
 use prost::{DecodeError, Message};
 use thruster::Context;
-use tokio::stream::StreamExt;
+use tokio_stream::StreamExt;
 
 use crate::body::ProtoBody;
 use crate::context::ProtoContext as Ctx;
 
-pub async fn context_to_message<T: Message + std::default::Default>(
-    context: &mut Ctx,
+pub async fn context_to_message<T: Message + std::default::Default, E>(
+    context: &mut Ctx<E>,
 ) -> Result<T, DecodeError> {
     let hyper_request = context.hyper_request.take().unwrap().request;
 
@@ -22,10 +22,10 @@ pub async fn context_to_message<T: Message + std::default::Default>(
     T::decode(&results[5..])
 }
 
-pub async fn message_to_context<T: Message + std::default::Default>(
-    mut context: Ctx,
+pub async fn message_to_context<T: Message + std::default::Default, E>(
+    mut context: Ctx<E>,
     message: T,
-) -> Ctx {
+) -> Ctx<E> {
     context.set("content-type", "application/grpc");
     context.set("grpc-status", "0");
     context.set("trailers", "grpc-status");

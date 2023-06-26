@@ -14,8 +14,8 @@ use crate::context::ProtoContext as Ctx;
 /// 4 accounts for content-type, server, grpc-status, and trailers.
 const DEFAULT_HEADER_CAPACITY: usize = 4;
 
-pub fn generate_context(request: HyperRequest, _state: &(), _path: &str) -> Ctx {
-    Ctx::new(request)
+pub fn generate_context(request: HyperRequest, _state: &(), _path: &str) -> Ctx<()> {
+    Ctx::new(request, ())
 }
 
 pub enum SameSite {
@@ -52,23 +52,25 @@ impl Default for CookieOptions {
 }
 
 #[derive(Default)]
-pub struct ProtoContext {
+pub struct ProtoContext<T> {
     pub body: Option<ProtoBody>,
     pub query_params: Option<HashMap<String, String>>,
     pub status: u16,
     pub hyper_request: Option<HyperRequest>,
+    pub extra: T,
     http_version: hyper::Version,
     headers: HeaderMap,
 }
 
-impl ProtoContext {
-    pub fn new(req: HyperRequest) -> ProtoContext {
+impl<T> ProtoContext<T> {
+    pub fn new(req: HyperRequest, extra: T) -> ProtoContext<T> {
         let mut ctx = ProtoContext {
             body: None,
             query_params: None,
             headers: HeaderMap::with_capacity(DEFAULT_HEADER_CAPACITY),
             status: 200,
             hyper_request: Some(req),
+            extra,
             http_version: hyper::Version::HTTP_11,
         };
 
@@ -183,7 +185,7 @@ impl ProtoContext {
     }
 }
 
-impl Context for ProtoContext {
+impl<T> Context for ProtoContext<T> {
     type Response = Response<ProtoBody>;
 
     fn get_response(mut self) -> Self::Response {
@@ -227,13 +229,13 @@ impl Context for ProtoContext {
     }
 }
 
-impl HasQueryParams for ProtoContext {
+impl<T> HasQueryParams for ProtoContext<T> {
     fn set_query_params(&mut self, query_params: HashMap<String, String>) {
         self.query_params = Some(query_params);
     }
 }
 
-impl Clone for ProtoContext {
+impl<T> Clone for ProtoContext<T> {
     fn clone(&self) -> Self {
         panic!("Do not use, just for internals.");
     }
