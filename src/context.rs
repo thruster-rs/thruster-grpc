@@ -246,7 +246,7 @@ impl<T> Clone for ProtoContext<T> {
 }
 
 #[async_trait]
-trait ProtoContextExt<T> {
+pub trait ProtoContextExt<T> {
     async fn proto<M: Message + std::default::Default>(&mut self, message: M);
     async fn get_proto<M: Message + std::default::Default>(&mut self) -> Result<M, DecodeError>;
 }
