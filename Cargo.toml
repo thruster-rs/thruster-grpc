@@ -1,6 +1,6 @@
 [package]
 name = "thruster-grpc"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Pete Mertz <peter.s.mertz@gmail.com>"]
 edition = "2018"
 description = "A GRPC library for use with thruster"

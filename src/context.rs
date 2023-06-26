@@ -1,12 +1,16 @@
+use async_trait::async_trait;
+use bytes::{BufMut, BytesMut};
 use hyper::body::Bytes;
 use hyper::header::{HeaderName, HeaderValue};
 use hyper::{HeaderMap, Response, StatusCode};
+use prost::{DecodeError, Message};
 use std::collections::HashMap;
 use std::convert::TryInto;
 use std::str;
 use thruster::context::hyper_request::HyperRequest;
 use thruster::middleware::query_params::HasQueryParams;
 use thruster::Context;
+use tokio_stream::StreamExt;
 
 use crate::body::ProtoBody;
 use crate::context::ProtoContext as Ctx;
@@ -238,5 +242,50 @@ impl<T> HasQueryParams for ProtoContext<T> {
 impl<T> Clone for ProtoContext<T> {
     fn clone(&self) -> Self {
         panic!("Do not use, just for internals.");
+    }
+}
+
+#[async_trait]
+trait ProtoContextExt<T> {
+    async fn proto<M: Message + std::default::Default>(&mut self, message: M);
+    async fn get_proto<M: Message + std::default::Default>(&mut self) -> Result<M, DecodeError>;
+}
+
+#[async_trait]
+impl<T: Send> ProtoContextExt<T> for ProtoContext<T> {
+    async fn proto<M: Message + std::default::Default>(&mut self, message: M) {
+        self.set("content-type", "application/grpc");
+        self.set("grpc-status", "0");
+        self.set("trailers", "grpc-status");
+        self.set_http2();
+
+        let mut buf = BytesMut::new();
+        buf.reserve(5);
+        buf.put(&b"00000"[..]);
+
+        let _ = message.encode(&mut buf);
+
+        let len = buf.len() - 5;
+        assert!(len <= std::u32::MAX as usize);
+        {
+            let mut buf = &mut buf[..5];
+            buf.put_u8(0); // byte must be 0, reserve doesn't auto-zero
+            buf.put_u32(len as u32);
+        }
+        let buf = buf.split_to(len + 5).freeze();
+
+        self.body = Some(ProtoBody::from_bytes(buf));
+    }
+
+    async fn get_proto<M: Message + std::default::Default>(&mut self) -> Result<M, DecodeError> {
+        let hyper_request = self.hyper_request.take().unwrap().request;
+
+        let mut results = vec![];
+        let mut body = hyper_request.into_body();
+        while let Some(Ok(chunk)) = body.next().await {
+            results.put(chunk);
+        }
+
+        M::decode(&results[5..])
     }
 }
